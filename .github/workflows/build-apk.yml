@@ -1,0 +1,51 @@
+
+name: Build Duet Drive APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'duet-drive-app/**'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: duet-drive-app
+
+    steps:
+      - name: Get project files
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set up Android project
+        run: npm run setup
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: duet-drive-debug-apk
+          path: duet-drive-app/android/app/build/outputs/apk/debug/app-debug.apk
