@@ -16,16 +16,22 @@ jobs:
 
       - name: Find project folder
         id: project
+        shell: bash
         run: |
-          if [ -f "package.json" ]; then
-            echo "dir=." >> "$GITHUB_OUTPUT"
-          elif [ -f "duet-drive-app/package.json" ]; then
-            echo "dir=duet-drive-app" >> "$GITHUB_OUTPUT"
-          else
-            echo "Could not find package.json"
-            find . -maxdepth 5 -name package.json
+          PACKAGE=$(find . -type f -name package.json \
+            -not -path '*/node_modules/*' \
+            -not -path '*/android/*' \
+            -print -quit)
+
+          if [ -z "$PACKAGE" ]; then
+            echo "package.json not found"
+            find . -maxdepth 5 -type f | head -100
             exit 1
           fi
+
+          DIR=$(dirname "$PACKAGE")
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "Project folder: $DIR"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
