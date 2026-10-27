@@ -4,21 +4,28 @@ name: Build Duet Drive APK
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'duet-drive-app/**'
-      - '.github/workflows/build-apk.yml'
+    branches: [main, master]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: duet-drive-app
-
     steps:
       - name: Get project files
         uses: actions/checkout@v4
+
+      - name: Find project folder
+        id: project
+        run: |
+          if [ -f "package.json" ]; then
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          elif [ -f "duet-drive-app/package.json" ]; then
+            echo "dir=duet-drive-app" >> "$GITHUB_OUTPUT"
+          else
+            echo "Could not find package.json"
+            find . -maxdepth 5 -name package.json
+            exit 1
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -26,18 +33,21 @@ jobs:
           node-version: 22
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Install dependencies
+        working-directory: ${{ steps.project.outputs.dir }}
         run: npm install
 
       - name: Set up Android project
+        working-directory: ${{ steps.project.outputs.dir }}
         run: npm run setup
 
       - name: Build APK
+        working-directory: ${{ steps.project.outputs.dir }}
         run: |
           cd android
           chmod +x gradlew
@@ -48,4 +58,4 @@ jobs:
         if: success()
         with:
           name: duet-drive-debug-apk
-          path: duet-drive-app/android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.project.outputs.dir }}/android/app/build/outputs/apk/debug/app-debug.apk
